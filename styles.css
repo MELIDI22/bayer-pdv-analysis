@@ -1,0 +1,111 @@
+/* ESTILOS DASHBOARD BAYER - DIANA */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap');
+
+:root {
+  --blue:   #003865; /* Azul Bayer */
+  --teal:   #00BCDD; /* Teal Bayer */
+  --lime:   #A5CD39; /* Lima Bayer */
+  --dark:   #001E3C;
+  --surf:   #F4F8FC;
+  --card:   #FFFFFF;
+  --bord:   rgba(0,56,101,.12);
+}
+
+/* Ocultar elementos innecesarios de Streamlit para una vista más limpia */
+div[data-testid="stToolbar"], 
+div[data-testid="stDecoration"],
+#MainMenu {
+    visibility: hidden;
+    display: none;
+}
+
+/* Fondo de la página y fuente principal */
+.main .block-container {
+    padding-top: 2rem;
+    background-color: var(--surf);
+    font-family: 'Barlow', sans-serif;
+}
+
+/* DISEÑO DEL HEADER (Encabezado) */
+.custom-header {
+    background: var(--dark);
+    display: flex;
+    align-items: center;
+    padding: 20px 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    margin-bottom: 25px;
+    border-left: 6px solid var(--teal);
+}
+
+.custom-header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    color: white;
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+.custom-header p {
+    color: var(--teal);
+    margin: 0;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* TARJETAS DE INDICADORES (KPI CARDS) */
+.kpi-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--bord);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 15px;
+    transition: transform 0.3s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+}
+
+/* Línea decorativa superior en las tarjetas */
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--teal), var(--lime));
+}
+
+.kpi-title {
+    font-size: 0.85rem;
+    color: #4A6070;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.kpi-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--blue);
+    line-height: 1.1;
+    margin-top: 5px;
+}
+
+/* Estilo para los botones de descarga */
+.stDownloadButton button {
+    background: linear-gradient(135deg, #006632, #009944) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+}
