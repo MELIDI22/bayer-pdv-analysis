@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
 
 # 1. CONFIGURACIÓN Y MODO OSCURO (SIMULADO PARA MÁXIMA COMPATIBILIDAD)
 st.set_page_config(page_title="Bayer | PDV Analysis", layout="wide")
