@@ -1,93 +1,83 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from fpdf import FPDF
-import os
+from datetime import datetime
 
-# 1. CONFIGURACIÓN DE LA PÁGINA
-st.set_page_config(
-    page_title="Di | Bayer PDV Dashboard",
-    page_icon="📊",
-    layout="wide"
-)
+# 1. CONFIGURACIÓN Y MODO OSCURO (SIMULADO PARA MÁXIMA COMPATIBILIDAD)
+st.set_page_config(page_title="Bayer | PDV Analysis", layout="wide")
 
-# 2. CARGAR EL DISEÑO VISUAL (CSS)
-def local_css(file_name):
-    if os.path.exists(file_name):
-        with open(file_name) as f:
-            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+# Sidebar para Filtros
+st.sidebar.image("https://www.bayer.com/themes/custom/bayer_cpa/logo.svg", width=100)
+st.sidebar.title("Filtros de Control")
 
-local_css("styles.css")
-
-# 3. CONEXIÓN A DATOS (GOOGLE SHEETS)
-@st.cache_data(ttl=600)
+# 2. CARGAR DATOS
+@st.cache_data
 def load_data():
-    try:
-        # Intenta leer el link secreto que configuraremos en Streamlit
-        sheet_url = st.secrets["URL_SHEET"]
-        df = pd.read_csv(sheet_url)
-        return df
-    except:
-        # Si aún no hay link, muestra datos de ejemplo para que veas el diseño
-        return pd.DataFrame({
-            'Producto': ['Aspirina', 'Redoxon', 'Alka-Seltzer', 'Bepanthen'],
-            'Ventas': [15000, 12000, 8000, 5000],
-            'Meta': [20000, 10000, 10000, 4000]
-        })
+    url = st.secrets["URL_SHEET"]
+    df = pd.read_csv(url)
+    # Limpieza de fechas y horas
+    df['Fecha de la visita'] = pd.to_datetime(df['Fecha de la visita'], dayfirst=True)
+    # Combinar fecha con hora para calcular permanencia
+    df['Check-in'] = pd.to_datetime(df['Fecha de la visita'].dt.strftime('%Y-%m-%d') + ' ' + df['Primer check-in manual'])
+    df['Check-out'] = pd.to_datetime(df['Fecha de la visita'].dt.strftime('%Y-%m-%d') + ' ' + df['Último check-out manual'])
+    df['Permanencia'] = (df['Check-out'] - df['Check-in']).dt.total_seconds() / 60
+    return df
 
-df = load_data()
+try:
+    df_raw = load_data()
 
-# 4. ENCABEZADO PERSONALIZADO (HTML)
-st.markdown("""
-    <div class="custom-header">
-        <div>
-            <h1>Dashboard de Análisis de Visitas</h1>
-            <p>Panel Ejecutivo de Gestión PDV | Bayer</p>
-        </div>
-        <div style="margin-left: auto; color: white; font-weight: bold; font-size: 1.2rem;">
-            By Di
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+    # 3. FILTRO DE FECHAS
+    col_f1, col_f2 = st.sidebar.columns(2)
+    with col_f1:
+        start_date = st.date_input("Desde", df_raw['Fecha de la visita'].min())
+    with col_f2:
+        end_date = st.date_input("Hasta", df_raw['Fecha de la visita'].max())
 
-# 5. INDICADORES CLAVE (KPIs)
-col1, col2, col3 = st.columns(3)
+    # Filtrar DataFrame
+    mask = (df_raw['Fecha de la visita'].dt.date >= start_date) & (df_raw['Fecha de la visita'].dt.date <= end_date)
+    df = df_raw.loc[mask]
 
-# Cálculos simples
-v_total = df.iloc[:, 1].sum() if len(df.columns) > 1 else 0 # Suma de la segunda columna
-meta_total = df.iloc[:, 2].sum() if len(df.columns) > 2 else 1
-cumplimiento = (v_total / meta_total) * 100
+    # 4. HEADER MÉTRICAS (Directorio)
+    st.markdown(f"## 📊 Reporte Ejecutivo: {start_date} al {end_date}")
+    
+    kpi1, kpi2, kpi3 = st.columns(3)
+    with kpi1:
+        st.metric("Total Visitas en Rango", len(df))
+    with kpi2:
+        st.metric("PDV Únicos Visitados", df['Punto de venta'].nunique())
+    with kpi3:
+        # Promedio de permanencia
+        avg_time = df['Permanencia'].mean()
+        st.metric("Promedio Permanencia", f"{avg_time:.1f} min")
 
-with col1:
-    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Ventas Totales</div><div class="kpi-value">${v_total:,.0f}</div></div>', unsafe_allow_html=True)
-with col2:
-    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Cumplimiento</div><div class="kpi-value">{cumplimiento:.1f}%</div></div>', unsafe_allow_html=True)
-with col3:
-    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Productos</div><div class="kpi-value">{len(df)}</div></div>', unsafe_allow_html=True)
+    st.divider()
 
-# 6. GRÁFICOS INTERACTIVOS
-st.markdown("### Rendimiento por Categoría")
-fig = px.bar(df, x=df.columns[0], y=df.columns[1], 
-             color_discrete_sequence=['#00BCDD'], # Color Teal Bayer
-             template="plotly_white")
+    # 5. DASHBOARDS ACTUALIZABLES
+    col_left, col_right = st.columns(2)
 
-fig.update_layout(font_family="Barlow", plot_bgcolor='rgba(0,0,0,0)')
-st.plotly_chart(fig, use_container_width=True)
+    with col_left:
+        st.subheader("📍 Visitas por Persona")
+        ranking_persona = df['Empleado'].value_counts().reset_index()
+        fig_pers = px.bar(ranking_persona, x='count', y='Empleado', orientation='h', 
+                          color='count', color_continuous_scale='Blues', template="simple_white")
+        st.plotly_chart(fig_pers, use_container_width=True)
 
-# 7. BOTÓN PARA DESCARGAR PDF
-def create_pdf(data):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(40, 10, "Informe Ejecutivo de Visitas - Bayer")
-    pdf.ln(20)
-    pdf.set_font("Arial", '', 12)
-    pdf.cell(40, 10, f"Resumen generado por Di")
-    return pdf.output(dest='S').encode('latin-1')
+    with col_right:
+        st.subheader("🏆 Ranking Farmacias")
+        ranking_farma = df['Punto de venta'].value_counts().reset_index().head(10)
+        fig_farma = px.bar(ranking_farma, x='count', y='Punto de venta', orientation='h',
+                           color_discrete_sequence=['#A5CD39'], template="simple_white")
+        st.plotly_chart(fig_farma, use_container_width=True)
 
-st.download_button(
-    label="Descargar Reporte en PDF",
-    data=create_pdf(df),
-    file_name="reporte_bayer.pdf",
-    mime="application/pdf"
-)
+    # 6. APARTADO DETALLADO (Check-in/Out)
+    st.divider()
+    st.subheader("📋 Detalle de Permanencia por Punto de Venta")
+    
+    # Seleccionar solo columnas necesarias para el directorio
+    df_detalle = df[['Empleado', 'Punto de venta', 'Fecha de la visita', 'Primer check-in manual', 'Último check-out manual', 'Permanencia']].copy()
+    df_detalle['Permanencia'] = df_detalle['Permanencia'].apply(lambda x: f"{int(x)} min" if x > 0 else "N/A")
+    
+    st.dataframe(df_detalle.sort_values(by='Fecha de la visita', ascending=False), use_container_width=True)
+
+except Exception as e:
+    st.error(f"Esperando conexión con Google Sheets... {e}")
