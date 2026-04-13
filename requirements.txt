@@ -2,8 +2,3 @@ streamlit
 pandas
 plotly
 fpdf
-streamlit
-pandas
-plotly
-fpdf
-streamlit-dark-light-mode
